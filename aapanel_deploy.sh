@@ -1,43 +1,38 @@
 #!/bin/bash
+echo $(date)
 
-# ==============================================================================
-# aaPanel Git Manager Deployment Script
-# ==============================================================================
-# This script is designed to be used in the aaPanel Git Manager "Script" section.
-# It handles pulling the latest code, installing dependencies, and building the app.
-# ==============================================================================
+# 1. Pastikan di folder yang benar (Sesuai script bawaan aaPanel)
+cd /www/wwwroot/list.ambaritek.com
 
-# 1. Set the correct working directory (usually passed by aaPanel or current dir)
-# Adjust if necessary, but typically running in the repo root is correct.
-echo "📂 Working Directory: $(pwd)"
-
-# 2. Pull latest changes (aaPanel usually does this, but good to be safe/explicit if run manually)
+# 2. Pull perubahan terbaru
 echo "⬇️  Pulling latest changes..."
-git pull
+git pull origin main
 
-# 3. Install dependencies
-# Using --legacy-peer-deps to avoid potential conflicts, though often not needed.
-# Using ci (clean install) if package-lock.json exists for consistency.
+# 3. Install dependencies (PENTING untuk build)
 echo "📦 Installing dependencies..."
+# Cek apakah npm ada
+if ! command -v npm &> /dev/null; then
+    echo "❌ Error: npm/node tidak ditemukan. Pastikan Node.js terinstall via Website -> Node Project atau PM2."
+    exit 1
+fi
+
 if [ -f "package-lock.json" ]; then
     npm ci
 else
     npm install
 fi
 
-# 4. Build the application
+# 4. Build aplikasi
 echo "🔨 Building application..."
 npm run build
 
-# 5. Check if build was successful
+# 5. Cek hasil build
 if [ -d "dist" ]; then
-    echo "✅ Build successful! 'dist' folder is ready."
-    
-    # Optional: Update permissions if needed
-    # chmod -R 755 dist
-    
-    echo "🚀 Deployment complete."
+    echo "✅ Build successful! 'dist' folder is updated."
 else
-    echo "❌ Build failed! 'dist' folder not found."
+    echo "❌ Build failed! 'dist' folder missing."
     exit 1
 fi
+
+echo "🚀 Application deployed!"
+echo ""
