@@ -22,7 +22,7 @@ const JFANS_CHECKLIST = [
     "Data & Photo kandidat fasilitas relokasi harus ada & Maps Jarak dengan lokasi existing.",
     "Setiap relokasi Wajib memberikan Maps Jarak antar lokasi existing Dan yg baru",
     "Bila di butuhkan bisa dikasih data tambahan P&L dll",
-    "Apakah PPT Sudah di Upload ke JFANS? (Centang bila Sudah upload di JFANS)"
+    "Apakah PPT Sudah di Upload ke JFANs? (Centang bila Sudah upload di JFANS)"
 
 ];
 
