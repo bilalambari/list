@@ -15,6 +15,7 @@ import { ProjectModal } from './components/modals/ProjectModal';
 import { ArchiveView } from './components/views/ArchiveView';
 import { LayoutGrid, List, Calendar as CalendarIcon, Plus, Filter, Search, X } from 'lucide-react';
 import { ProjectStatus, TaskStatus, Priority } from './types';
+import { MultiSelect } from './components/ui/MultiSelect';
 
 // --- Login Page ---
 const LoginPage = () => {
@@ -218,7 +219,7 @@ const TasksPage = () => {
   // Advanced Filter State
   const [showFilters, setShowFilters] = useState(false);
   const [matchAll, setMatchAll] = useState(true);
-  const [filters, setFilters] = useState<{ field: string; value: string }[]>([
+  const [filters, setFilters] = useState<{ field: string; value: any }[]>([
     { field: 'title', value: '' }
   ]);
 
@@ -227,11 +228,16 @@ const TasksPage = () => {
     return tasks.filter(task => {
       const results = filters.map(f => {
         if (!f.value) return true;
-        const val = f.value.toLowerCase();
         switch (f.field) {
-          case 'title': return task.title.toLowerCase().includes(val);
-          case 'status': return task.status === f.value;
-          case 'priority': return task.priority === f.value;
+          case 'title': return typeof f.value === 'string' && task.title.toLowerCase().includes(f.value.toLowerCase());
+          case 'status':
+            return Array.isArray(f.value) && f.value.length > 0
+              ? f.value.includes(task.status)
+              : true;
+          case 'priority':
+            return Array.isArray(f.value) && f.value.length > 0
+              ? f.value.includes(task.priority)
+              : true;
           case 'project': return task.projectId === f.value;
           case 'assignee': return task.assigneeIds && task.assigneeIds.includes(f.value);
           default: return true;
@@ -242,9 +248,18 @@ const TasksPage = () => {
   }, [tasks, filters, matchAll]);
 
   const addFilter = () => setFilters([...filters, { field: 'title', value: '' }]);
-  const updateFilter = (index: number, key: string, val: string) => {
+  const updateFilter = (index: number, key: string, val: any) => {
     const newFilters = [...filters];
-    newFilters[index] = { ...newFilters[index], [key]: val };
+    // If changing field to/from status/priority, reset value
+    if (key === 'field') {
+      if (['status', 'priority'].includes(val)) {
+        newFilters[index] = { ...newFilters[index], [key]: val, value: [] };
+      } else {
+        newFilters[index] = { ...newFilters[index], [key]: val, value: '' };
+      }
+    } else {
+      newFilters[index] = { ...newFilters[index], [key]: val };
+    }
     setFilters(newFilters);
   };
   const removeFilter = (index: number) => setFilters(filters.filter((_, i) => i !== index));
@@ -303,15 +318,23 @@ const TasksPage = () => {
                 {filter.field === 'title' ? (
                   <input type="text" value={filter.value} onChange={(e) => updateFilter(idx, 'value', e.target.value)} placeholder="Task title..." className="text-sm bg-white border border-slate-300 rounded px-2 py-1.5 focus:ring-indigo-500 flex-1" />
                 ) : filter.field === 'status' ? (
-                  <select value={filter.value} onChange={(e) => updateFilter(idx, 'value', e.target.value)} className="text-sm bg-white border border-slate-300 rounded px-2 py-1.5 focus:ring-indigo-500 flex-1">
-                    <option value="">Any Status</option>
-                    {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <div className="flex-1 min-w-[200px]">
+                    <MultiSelect
+                      options={Object.values(TaskStatus)}
+                      selected={Array.isArray(filter.value) ? filter.value : []}
+                      onChange={(selected) => updateFilter(idx, 'value', selected)}
+                      placeholder="Select Statuses..."
+                    />
+                  </div>
                 ) : filter.field === 'priority' ? (
-                  <select value={filter.value} onChange={(e) => updateFilter(idx, 'value', e.target.value)} className="text-sm bg-white border border-slate-300 rounded px-2 py-1.5 focus:ring-indigo-500 flex-1">
-                    <option value="">Any Priority</option>
-                    {Object.values(Priority).map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  <div className="flex-1 min-w-[200px]">
+                    <MultiSelect
+                      options={Object.values(Priority)}
+                      selected={Array.isArray(filter.value) ? filter.value : []}
+                      onChange={(selected) => updateFilter(idx, 'value', selected)}
+                      placeholder="Select Priorities..."
+                    />
+                  </div>
                 ) : filter.field === 'project' ? (
                   <select value={filter.value} onChange={(e) => updateFilter(idx, 'value', e.target.value)} className="text-sm bg-white border border-slate-300 rounded px-2 py-1.5 focus:ring-indigo-500 flex-1">
                     <option value="">Any Project</option>
@@ -333,7 +356,7 @@ const TasksPage = () => {
 
       <div className="flex-1 overflow-hidden bg-slate-50/50 p-2 md:p-6">
         {view === 'KANBAN' && <KanbanBoard tasks={filteredTasks} />}
-        {view === 'GRID' && <div className="p-4"><GridView type="tasks" data={filteredTasks} /></div>}
+        {view === 'GRID' && <div className="p-4 h-full overflow-y-auto"><GridView type="tasks" data={filteredTasks} /></div>}
         {view === 'CALENDAR' && <div className="h-full"><CalendarView tasks={filteredTasks} projects={projects} /></div>}
       </div>
     </div>
