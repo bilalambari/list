@@ -35,26 +35,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const storedUser = localStorage.getItem('taskflow_user');
       const lastActivity = localStorage.getItem('taskflow_last_activity');
 
-      if (storedUser && lastActivity) {
-        const timeSinceLastActivity = Date.now() - parseInt(lastActivity);
+      console.log('Checking Session:', { storedUser: !!storedUser, lastActivity });
 
-        if (timeSinceLastActivity > SESSION_TIMEOUT) {
-          // Session expired
-          logout();
-        } else {
-          // Verify user still exists in DB
+      if (storedUser) {
+        // Check if session has expired (only if lastActivity exists)
+        if (lastActivity) {
+          const timeSinceLastActivity = Date.now() - parseInt(lastActivity);
+          console.log(`Time since activity: ${timeSinceLastActivity}ms, Timeout: ${SESSION_TIMEOUT}ms`);
+
+          if (timeSinceLastActivity > SESSION_TIMEOUT) {
+            // Session expired due to inactivity
+            console.log('Session expired. Logging out.');
+            logout();
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Session is valid or lastActivity was never set (legacy user)
+        // Verify user still exists in DB
+        try {
+          console.log('Verifying user with API...');
           const members = await api.getMembers();
           const parsed = JSON.parse(storedUser);
           const freshUser = members.find(m => m.id === parsed.id);
 
           if (freshUser) {
+            console.log('User verified. Session restored.');
             setUser(freshUser);
-            updateActivity(); // Refresh activity on load
+            updateActivity(); // Refresh/set activity timestamp
           } else {
+            console.log('User not found in DB. Logging out.');
             // User no longer exists in DB
             logout();
           }
+        } catch (error) {
+          console.error("Failed to verify user session", error);
+          // On network error, still allow the user to stay logged in with cached data
+          const parsed = JSON.parse(storedUser);
+          setUser(parsed);
+          updateActivity();
         }
+      } else {
+        console.log('No stored user found.');
       }
       setIsLoading(false);
     };
