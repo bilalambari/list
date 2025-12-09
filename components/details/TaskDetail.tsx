@@ -13,7 +13,8 @@ const JFANS_CHECKLIST = [
     "Pastikan History Masa sewa fasilitas telah di masukan pada JFANS",
     "Pastikan luasan SAMA bangunan existing fasilitas (renewal) Pada tabel JFANS",
     "Pastikan kandidat yg terdapat di PpT masuk semua k Survey report JFANS",
-    "Bila Relokasi Tanyakan apakah ada Renovasi di Gudang Existing sebelumnya",
+    "Bila Relokasi Tanyakan apakah ada Renovasi di Gudang Existing sebelumnya?",
+    "Jika tidak ada renovasi, wajib jelaskan pada kolom keterangan, dan jika ada renovasi wajib isi kolom renovation cost",
     "History negosiasi Fasilitas WAJIB Ada (Bukti Chat Nego Gpp Apalagi kalau Harga Naik)",
     "Jika terdapat hasil negosiasi angka sebelum nya dicantumkan agar Pak Jojo Tau. SS Chat Gpp",
     "Data shipment + (pastikan sesuai dengan fungsi)",
@@ -339,20 +340,22 @@ export const TaskDetail: React.FC = () => {
             updateTask({ ...existingTask, comments: updatedComments });
         }
 
-        const mentionRegex = /@([a-zA-Z0-9 ]+)/g;
-        let match;
-        const mentionedNames = new Set<string>();
-        while ((match = mentionRegex.exec(newComment.text)) !== null) {
-            mentionedNames.add(match[1].trim());
-        }
+        // Check for mentions
+        members.forEach(member => {
+            if (member.id === user.id) return;
 
-        mentionedNames.forEach(name => {
-            const mentionedMember = members.find(m => m.name.toLowerCase().includes(name.toLowerCase()));
+            // Escape special characters in name for regex
+            const safeName = member.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Match @Name with word boundary, case insensitive
+            // \b ensures we don't match partial names if the name ends with a word character
+            // If name ends with space, trim it first
+            const nameToMatch = safeName.trim();
+            const pattern = new RegExp(`@${nameToMatch}\\b`, 'i');
 
-            if (mentionedMember && mentionedMember.id !== user.id) {
+            if (pattern.test(newComment.text)) {
                 addNotification({
                     id: Math.random().toString(36).substr(2, 9),
-                    userId: mentionedMember.id,
+                    userId: member.id,
                     type: 'MENTION',
                     message: `${user.name} mentioned you in "${formData.title}"`,
                     link: `/tasks/${id}`,
